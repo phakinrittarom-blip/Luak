@@ -1,0 +1,172 @@
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local TweenService = game:GetService("TweenService")
+
+local player = Players.LocalPlayer
+local playerGui = player:WaitForChild("PlayerGui")
+
+-- สร้าง RemoteEvent สำหรับคุยกับ Server
+local aiEvent = ReplicatedStorage:FindFirstChild("AIChatEvent")
+if not aiEvent then
+	aiEvent = Instance.new("RemoteEvent")
+	aiEvent.Name = "AIChatEvent"
+	aiEvent.Parent = ReplicatedStorage
+end
+
+-- 1. สร้าง ScreenGui และ Frame หลัก
+local screenGui = Instance.new("ScreenGui")
+screenGui.Name = "BemoAIGui"
+screenGui.ResetOnSpawn = false
+screenGui.Parent = playerGui
+
+local mainFrame = Instance.new("Frame")
+mainFrame.Name = "MainFrame"
+mainFrame.Size = UDim2.new(0, 320, 0, 380)
+mainFrame.Position = UDim2.new(0.5, -160, 0.5, -190)
+mainFrame.BackgroundColor3 = Color3.fromRGB(24, 119, 242)
+mainFrame.BorderSizePixel = 0
+mainFrame.ClipsDescendants = true
+mainFrame.Parent = screenGui
+
+local frameCorner = Instance.new("UICorner")
+frameCorner.CornerRadius = UDim.new(0, 12)
+frameCorner.Parent = mainFrame
+
+-- 2. Title Bar Header
+local titleBar = Instance.new("Frame")
+titleBar.Name = "TitleBar"
+titleBar.Size = UDim2.new(1, 0, 0, 40)
+titleBar.BackgroundTransparency = 1
+titleBar.Parent = mainFrame
+
+local titleText = Instance.new("TextLabel")
+titleText.Size = UDim2.new(1, 0, 1, 0)
+titleText.BackgroundTransparency = 1
+titleText.Text = "🤖 BEMO AI"
+titleText.TextColor3 = Color3.fromRGB(255, 255, 255)
+titleText.TextSize = 18
+titleText.Font = Enum.Font.GothamBold
+titleText.Parent = titleBar
+
+-- 3. Chat History Container (ScrollingFrame)
+local scrollFrame = Instance.new("ScrollingFrame")
+scrollFrame.Name = "ChatScroll"
+scrollFrame.Size = UDim2.new(1, -20, 1, -110)
+scrollFrame.Position = UDim2.new(0, 10, 0, 45)
+scrollFrame.BackgroundColor3 = Color3.fromRGB(16, 95, 200)
+scrollFrame.BorderSizePixel = 0
+scrollFrame.ScrollBarThickness = 4
+scrollFrame.CanvasSize = UDim2.new(0, 0, 0, 0)
+scrollFrame.Parent = mainFrame
+
+local scrollCorner = Instance.new("UICorner")
+scrollCorner.CornerRadius = UDim.new(0, 8)
+scrollCorner.Parent = scrollFrame
+
+local UIListLayout = Instance.new("UIListLayout")
+UIListLayout.Parent = scrollFrame
+UIListLayout.SortOrder = Enum.SortOrder.LayoutOrder
+UIListLayout.Padding = UDim.new(0, 8)
+
+local UIPadding = Instance.new("UIPadding")
+UIPadding.PaddingTop = UDim.new(0, 8)
+UIPadding.PaddingBottom = UDim.new(0, 8)
+UIPadding.PaddingLeft = UDim.new(0, 8)
+UIPadding.PaddingRight = UDim.new(0, 8)
+UIPadding.Parent = scrollFrame
+
+-- อัปเดตขนาด Canvas อัตโนมัติเมื่อมีข้อความใหม่
+UIListLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
+	scrollFrame.CanvasSize = UDim2.new(0, 0, 0, UIListLayout.AbsoluteContentSize.Y + 16)
+	scrollFrame.CanvasPosition = Vector2.new(0, scrollFrame.CanvasSize.Y.Offset)
+end)
+
+-- 4. Input Container (TextBox + Send Button)
+local inputContainer = Instance.new("Frame")
+inputContainer.Name = "InputContainer"
+inputContainer.Size = UDim2.new(1, -20, 0, 40)
+inputContainer.Position = UDim2.new(0, 10, 1, -50)
+inputContainer.BackgroundTransparency = 1
+inputContainer.Parent = mainFrame
+
+local textBox = Instance.new("TextBox")
+textBox.Name = "InputBox"
+textBox.Size = UDim2.new(0.75, -5, 1, 0)
+textBox.Position = UDim2.new(0, 0, 0, 0)
+textBox.BackgroundColor3 = Color3.fromRGB(12, 70, 150)
+textBox.BorderSizePixel = 0
+textBox.PlaceholderText = "พิมพ์ข้อความ..."
+textBox.PlaceholderColor3 = Color3.fromRGB(180, 200, 230)
+textBox.Text = ""
+textBox.TextColor3 = Color3.fromRGB(255, 255, 255)
+textBox.TextSize = 14
+textBox.Font = Enum.Font.Gotham
+textBox.TextXAlignment = Enum.TextXAlignment.Left
+textBox.Parent = inputContainer
+
+local boxCorner = Instance.new("UICorner")
+boxCorner.CornerRadius = UDim.new(0, 8)
+boxCorner.Parent = textBox
+
+local boxPadding = Instance.new("UIPadding")
+boxPadding.PaddingLeft = UDim.new(0, 10)
+boxPadding.Parent = textBox
+
+local sendButton = Instance.new("TextButton")
+sendButton.Name = "SendButton"
+sendButton.Size = UDim2.new(0.25, -5, 1, 0)
+sendButton.Position = UDim2.new(0.75, 5, 0, 0)
+sendButton.BackgroundColor3 = Color3.fromRGB(0, 180, 255)
+sendButton.BorderSizePixel = 0
+sendButton.Text = "ส่ง"
+sendButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+sendButton.TextSize = 14
+sendButton.Font = Enum.Font.GothamBold
+sendButton.Parent = inputContainer
+
+local btnCorner = Instance.new("UICorner")
+btnCorner.CornerRadius = UDim.new(0, 8)
+btnCorner.Parent = sendButton
+
+-- ฟังก์ชั่นสร้างกล่องข้อความ
+local function addMessage(text, isAI)
+	local msgLabel = Instance.new("TextLabel")
+	msgLabel.Size = UDim2.new(1, 0, 0, 0)
+	msgLabel.BackgroundTransparency = 1
+	msgLabel.Text = (isAI and "🤖 " or "💬 ") .. text
+	msgLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+	msgLabel.TextSize = 13
+	msgLabel.Font = Enum.Font.Gotham
+	msgLabel.TextWrapped = true
+	msgLabel.TextXAlignment = Enum.TextXAlignment.Left
+	msgLabel.Parent = scrollFrame
+
+	-- ปรับความสูงตามความยาวข้อความ
+	msgLabel.Size = UDim2.new(1, 0, 0, msgLabel.TextBounds.Y + 4)
+end
+
+-- ข้อความเริ่มต้นเมื่อเปิดใช้งาน
+addMessage("สวัสดีครับ! ผม BEMO", true)
+addMessage("ถามอะไรก็ได้ ผมตอบได้ทุกเรื่อง!", true)
+
+-- ฟังก์ชั่นเมื่อกดส่งข้อความ
+local function sendMessage()
+	local text = textBox.Text
+	if text ~= "" and text:match("%S") then
+		addMessage(text, false)
+		textBox.Text = ""
+		aiEvent:FireServer(text)
+	end
+end
+
+sendButton.MouseButton1Click:Connect(sendMessage)
+textBox.FocusLost:Connect(function(enterPressed)
+	if enterPressed then
+		sendMessage()
+	end
+end)
+
+-- รับข้อความตอบกลับจาก AI Server
+aiEvent.OnClientEvent:Connect(function(aiResponse)
+	addMessage(aiResponse, true)
+end)
