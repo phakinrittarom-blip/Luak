@@ -1,0 +1,78 @@
+-- ดึง Rayfield UI Library มาใช้งาน
+local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
+
+-- สร้าง Window หลัก
+local Window = Rayfield:CreateWindow({
+   Name = "🤖 BEMO AI",
+   Icon = 0, -- สามารถใส่ Asset ID ของไอคอนได้
+   LoadingTitle = "BEMO AI System",
+   LoadingSubtitle = "by Roblox Developer",
+   Theme = "Ocean", -- ใช้ธีม Ocean เพื่อให้ได้โทนสีฟ้าใกล้เคียงในรูป
+
+   DisableRayfieldPrompts = false,
+   DisableBuildWarnings = false,
+
+   ConfigurationSaving = {
+      Enabled = false,
+      FolderName = nil,
+      FileName = "BemoAIConfig"
+   },
+
+   KeySystem = false -- ตั้งเป็น true หากต้องการล็อกระบบกุญแจ
+})
+
+-- สร้าง Tab สำหรับแชท
+local ChatTab = Window:CreateTab("💬 AI Chat", 4483362458) -- Icon ID
+
+-- ข้อความต้อนรับเริ่มต้น
+ChatTab:CreateSection("--- สถานะแชท ---")
+
+local WelcomeLabel1 = ChatTab:CreateLabel("🤖: สวัสดีครับ! ผม BEMO")
+local WelcomeLabel2 = ChatTab:CreateLabel("💬: ถามอะไรก็ได้ ผมตอบได้ทุกเรื่อง!")
+
+ChatTab:CreateSection("--- กล่องสนทนา ---")
+
+-- ตัวแปรเก็บข้อความล่าสุดของ AI
+local LastResponseLabel = ChatTab:CreateLabel("🤖 BEMO: (รอคำถามจากคุณ...)")
+
+-- ช่องสำหรับพิมพ์คำถาม
+local UserInput = ""
+ChatTab:CreateInput({
+   Name = "พิมพ์ข้อความที่นี่",
+   PlaceholderText = "พิมพ์คำถามของคุณ...",
+   RemoveTextAfterFocusLost = false,
+   Callback = function(Text)
+      UserInput = Text
+   end,
+})
+
+-- ปุ่มสำหรับกดส่งข้อความ
+ChatTab:CreateButton({
+   Name = "ส่งข้อความ 🚀",
+   Callback = function()
+      if UserInput == "" or UserInput:find("^%s*$") then 
+         Rayfield:Notify({
+            Title = "แจ้งเตือน",
+            Content = "กรุณากรอกข้อความก่อนกดส่งครับ",
+            Duration = 3,
+            Image = 4483362458,
+         })
+         return 
+      end
+
+      -- แสดงการตอบรับว่ากำลังประมวลผล
+      LastResponseLabel:Set("🤖 BEMO: กำลังคิดคำตอบ...")
+
+      -- จำลองระบบตอบกลับ (สามารถเชื่อมต่อ API เพิ่มเติมได้ที่นี่)
+      task.wait(1)
+      LastResponseLabel:Set("🤖 BEMO: คุณถามว่า '" .. UserInput .. "' (นำระบบ API มาเชื่อมต่อตรงจุดนี้ได้)")
+      
+      -- แจ้งเตือนเมื่อ AI ตอบกลับ
+      Rayfield:Notify({
+         Title = "BEMO AI",
+         Content = "ตอบกลับคำถามของคุณแล้ว!",
+         Duration = 3,
+         Image = 4483362458,
+      })
+   end,
+})
