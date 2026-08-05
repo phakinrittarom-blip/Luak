@@ -1,0 +1,232 @@
+local Players = game:GetService("Players")
+local UserInputService = game:GetService("UserInputService")
+
+local player = Players.LocalPlayer
+local playerGui = player:WaitForChild("PlayerGui")
+
+-- 1. สร้าง ScreenGui
+local screenGui = Instance.new("ScreenGui")
+screenGui.Name = "LeoChatGui"
+screenGui.ResetOnSpawn = false
+screenGui.Parent = playerGui
+
+-- 2. สร้างปุ่มเปิด/ปิด UI (Toggle Button)
+local toggleBtn = Instance.new("TextButton")
+toggleBtn.Name = "ToggleButton"
+toggleBtn.Size = UDim2.new(0, 50, 0, 50)
+toggleBtn.Position = UDim2.new(0, 20, 0.5, -25)
+toggleBtn.BackgroundColor3 = Color3.fromRGB(0, 120, 215)
+toggleBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+toggleBtn.Text = "🤖"
+toggleBtn.TextSize = 24
+toggleBtn.Parent = screenGui
+
+local toggleCorner = Instance.new("UICorner")
+toggleCorner.CornerRadius = UDim.new(0, 25)
+toggleCorner.Parent = toggleBtn
+
+-- 3. สร้างหน้าต่างหลัก (Main Frame)
+local mainFrame = Instance.new("Frame")
+mainFrame.Name = "MainFrame"
+mainFrame.Size = UDim2.new(0, 320, 0, 400)
+mainFrame.Position = UDim2.new(0.5, -160, 0.5, -200)
+mainFrame.BackgroundColor3 = Color3.fromRGB(15, 110, 210)
+mainFrame.BorderSizePixel = 0
+mainFrame.Parent = screenGui
+
+local frameCorner = Instance.new("UICorner")
+frameCorner.CornerRadius = UDim.new(0, 12)
+frameCorner.Parent = mainFrame
+
+-- 4. แถบหัวข้อ (Title Bar - ใช้ลากหน้าต่างได้)
+local titleBar = Instance.new("Frame")
+titleBar.Name = "TitleBar"
+titleBar.Size = UDim2.new(1, 0, 0, 40)
+titleBar.BackgroundColor3 = Color3.fromRGB(10, 85, 170)
+titleBar.BorderSizePixel = 0
+titleBar.Parent = mainFrame
+
+local titleCorner = Instance.new("UICorner")
+titleCorner.CornerRadius = UDim.new(0, 12)
+titleCorner.Parent = titleBar
+
+local titleText = Instance.new("TextLabel")
+titleText.Size = UDim2.new(1, -40, 1, 0)
+titleText.Position = UDim2.new(0, 10, 0, 0)
+titleText.BackgroundTransparency = 1
+titleText.Text = "🤖 ลีโอ"
+titleText.TextColor3 = Color3.fromRGB(255, 255, 255)
+titleText.TextSize = 18
+titleText.Font = Enum.Font.SourceSansBold
+titleText.TextXAlignment = Enum.TextXAlignment.Left
+titleText.Parent = titleBar
+
+-- ปุ่มปิด (Close Button)
+local closeBtn = Instance.new("TextButton")
+closeBtn.Size = UDim2.new(0, 30, 0, 30)
+closeBtn.Position = UDim2.new(1, -35, 0, 5)
+closeBtn.BackgroundTransparency = 1
+closeBtn.Text = "✕"
+closeBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+closeBtn.TextSize = 18
+closeBtn.Parent = titleBar
+
+-- 5. พื้นที่แสดงข้อความแชท (ScrollingFrame)
+local chatLog = Instance.new("ScrollingFrame")
+chatLog.Name = "ChatLog"
+chatLog.Size = UDim2.new(1, -20, 1, -110)
+chatLog.Position = UDim2.new(0, 10, 0, 50)
+chatLog.BackgroundTransparency = 1
+chatLog.CanvasSize = UDim2.new(0, 0, 0, 0)
+chatLog.AutomaticCanvasSize = Enum.AutomaticSize.Y
+chatLog.ScrollBarThickness = 4
+chatLog.Parent = mainFrame
+
+local UIListLayout = Instance.new("UIListLayout")
+UIListLayout.Parent = chatLog
+UIListLayout.SortOrder = Enum.SortOrder.LayoutOrder
+UIListLayout.Padding = UDim.new(0, 8)
+
+-- 6. ช่องพิมพ์คำถาม และ ปุ่มส่ง
+local inputFrame = Instance.new("Frame")
+inputFrame.Size = UDim2.new(1, -20, 0, 40)
+inputFrame.Position = UDim2.new(0, 10, 1, -50)
+inputFrame.BackgroundTransparency = 1
+inputFrame.Parent = mainFrame
+
+local textBox = Instance.new("TextBox")
+textBox.Size = UDim2.new(1, -60, 1, 0)
+textBox.BackgroundColor3 = Color3.fromRGB(10, 85, 170)
+textBox.PlaceholderText = "พิมพ์ข้อความ..."
+textBox.PlaceholderColor3 = Color3.fromRGB(180, 200, 230)
+textBox.TextColor3 = Color3.fromRGB(255, 255, 255)
+textBox.Text = ""
+textBox.TextSize = 14
+textBox.ClearTextOnFocus = false
+textBox.Parent = inputFrame
+
+local tbCorner = Instance.new("UICorner")
+tbCorner.CornerRadius = UDim.new(0, 8)
+tbCorner.Parent = textBox
+
+local sendBtn = Instance.new("TextButton")
+sendBtn.Size = UDim2.new(0, 50, 1, 0)
+sendBtn.Position = UDim2.new(1, -50, 0, 0)
+sendBtn.BackgroundColor3 = Color3.fromRGB(0, 170, 255)
+sendBtn.Text = "ส่ง"
+sendBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+sendBtn.TextSize = 14
+sendBtn.Font = Enum.Font.SourceSansBold
+sendBtn.Parent = inputFrame
+
+local sbCorner = Instance.new("UICorner")
+sbCorner.CornerRadius = UDim.new(0, 8)
+sbCorner.Parent = sendBtn
+
+-- ฟังก์ชันเพิ่มข้อความในช่องแชท
+local function addMessage(sender, text)
+	local msgLabel = Instance.new("TextLabel")
+	msgLabel.Size = UDim2.new(1, 0, 0, 0)
+	msgLabel.AutomaticSize = Enum.AutomaticSize.Y
+	msgLabel.BackgroundColor3 = Color3.fromRGB(10, 85, 170)
+	msgLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+	msgLabel.Text = sender .. ": " .. text
+	msgLabel.TextSize = 14
+	msgLabel.TextWrapped = true
+	msgLabel.TextXAlignment = Enum.TextXAlignment.Left
+	msgLabel.Parent = chatLog
+
+	local msgCorner = Instance.new("UICorner")
+	msgCorner.CornerRadius = UDim.new(0, 6)
+	msgCorner.Parent = msgLabel
+	
+	local msgPadding = Instance.new("UIPadding")
+	msgPadding.PaddingTop = UDim.new(0, 6)
+	msgPadding.PaddingBottom = UDim.new(0, 6)
+	msgPadding.PaddingLeft = UDim.new(0, 8)
+	msgPadding.PaddingRight = UDim.new(0, 8)
+	msgPadding.Parent = msgLabel
+	
+	chatLog.CanvasPosition = Vector2.new(0, chatLog.AbsoluteCanvasSize.Y)
+end
+
+-- 7. ระบบตอบคำถามจำลองของ AI (ตอบได้จริงตามคีย์เวิร์ด)
+local function getAIResponse(msg)
+	msg = string.lower(msg)
+	if string.find(msg, "หวัดดี") or string.find(msg, "สวัสดี") or string.find(msg, "hi") or string.find(msg, "hello") then
+		return "สวัสดีครับ! ผมคือลีโอ มีอะไรให้ช่วยไหมครับ?"
+	elseif string.find(msg, "ชื่ออะไร") then
+		return "ผมชื่อ AI ลีโอ ครับ!"
+	elseif string.find(msg, "ทำอะไรได้") then
+		return "ผมสามารถตอบคำถามทั่วไป คุยเล่น หรือช่วยแนะนำข้อมูลในเกมได้ครับ"
+	elseif string.find(msg, "สบายดีไหม") then
+		return "สบายดีครับ! พร้อมช่วยคุณเสมอ"
+	else
+		return "รับทราบครับ! คำถามนี้น่าสนใจมาก มีอะไรสอบถามเพิ่มเติมไหมครับ?"
+	end
+end
+
+local function onSend()
+	local text = textBox.Text
+	if text ~= "" then
+		addMessage("คุณ", text)
+		textBox.Text = ""
+		
+		task.wait(0.5) -- จำลองระยะเวลาคิดของ AI
+		local response = getAIResponse(text)
+		addMessage("ลีโอ", response)
+	end
+end
+
+sendBtn.MouseButton1Click:Connect(onSend)
+textBox.FocusLost:Connect(function(enterPressed)
+	if enterPressed then
+		onSend()
+	end
+end)
+
+-- 8. ระบบเปิด/ปิด หน้าต่าง UI
+closeBtn.MouseButton1Click:Connect(function()
+	mainFrame.Visible = false
+end)
+
+toggleBtn.MouseButton1Click:Connect(function()
+	mainFrame.Visible = not mainFrame.Visible
+end)
+
+-- 9. ระบบลากเลื่อนหน้าต่าง (Dragging System)
+local dragging, dragInput, dragStart, startPos
+
+local function update(input)
+	local delta = input.Position - dragStart
+	mainFrame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+end
+
+titleBar.InputBegan:Connect(function(input)
+	if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+		dragging = true
+		dragStart = input.Position
+		startPos = mainFrame.Position
+
+		input.Changed:Connect(function()
+			if input.UserInputState == Enum.UserInputState.End then
+				dragging = false
+			end
+		end)
+	end
+end)
+
+titleBar.InputChanged:Connect(function(input)
+	if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
+		dragInput = input
+	end
+end)
+
+UserInputService.InputChanged:Connect(function(input)
+	if input == dragInput and dragging then
+		update(input)
+	end
+end)
+
+-- ข้อความต้อนรับเริ่มต้น
+addMessage("ลีโอ", "สวัสดีครับ! ผม ลีโอ ถามอะไรก็ได้ ผมตอบได้ทุกเรื่อง!")
